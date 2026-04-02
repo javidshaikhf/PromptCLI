@@ -2,17 +2,20 @@ import { useState } from "react";
 import type { AppSettings, ProviderId } from "../../lib/contracts";
 import { MODEL_CATALOG } from "../../lib/providers/catalog";
 import { removeProviderKey, saveProviderKey, saveSettings } from "../../lib/tauri/bridge";
+import { removeProviderConfig } from "../../lib/settings/defaults";
 
 interface SettingsScreenProps {
   settings: AppSettings;
   onClose: () => void;
   onChange: (settings: AppSettings) => void;
+  onAddProvider: () => void;
 }
 
 export function SettingsScreen({
   settings,
   onClose,
-  onChange
+  onChange,
+  onAddProvider
 }: SettingsScreenProps): JSX.Element {
   const [draft, setDraft] = useState(settings);
   const [status, setStatus] = useState<string | null>(null);
@@ -50,24 +53,9 @@ export function SettingsScreen({
   }
 
   async function handleRemoveProvider(providerId: ProviderId) {
-    if (draft.providers.length === 1) {
-      setError("PromptCLI needs at least one configured provider in v1.");
-      return;
-    }
-
-    const remainingProviders = draft.providers.filter(
-      (provider) => provider.providerId !== providerId
-    );
-
     try {
       await removeProviderKey(providerId);
-
-      const nextSettings: AppSettings = {
-        ...draft,
-        activeProviderId:
-          remainingProviders[0]?.providerId ?? draft.activeProviderId,
-        providers: remainingProviders
-      };
+      const nextSettings = removeProviderConfig(draft, providerId);
 
       setDraft(nextSettings);
       setStatus(`Removed ${providerId} credentials.`);
@@ -86,31 +74,43 @@ export function SettingsScreen({
         <div className="space-between">
           <div>
             <p className="eyebrow">Settings</p>
-            <h2>Providers and safety</h2>
+            <h2>Providers and terminal behavior</h2>
           </div>
-          <button className="ghost-button" onClick={onClose} type="button">
-            Close
-          </button>
+          <div className="button-row">
+            <button className="ghost-button" onClick={onAddProvider} type="button">
+              Add provider
+            </button>
+            <button className="ghost-button" onClick={onClose} type="button">
+              Close
+            </button>
+          </div>
         </div>
 
-        <label className="field">
-          <span>Active provider</span>
-          <select
-            value={draft.activeProviderId}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                activeProviderId: event.target.value as ProviderId
-              }))
-            }
-          >
-            {draft.providers.map((provider) => (
-              <option key={provider.providerId} value={provider.providerId}>
-                {provider.providerId}
-              </option>
-            ))}
-          </select>
-        </label>
+        {draft.providers.length > 0 ? (
+          <label className="field">
+            <span>Active provider</span>
+            <select
+              value={draft.activeProviderId ?? ""}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  activeProviderId: event.target.value as ProviderId
+                }))
+              }
+            >
+              {draft.providers.map((provider) => (
+                <option key={provider.providerId} value={provider.providerId}>
+                  {provider.providerId}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p className="muted">
+            No provider configured yet. Shell commands still work. Add a provider
+            to enable natural-language planning.
+          </p>
+        )}
 
         {draft.providers.map((provider) => (
           <section className="provider-card" key={provider.providerId}>
@@ -182,7 +182,12 @@ export function SettingsScreen({
             Plans will use <strong>{activeProvider.providerId}</strong> with{" "}
             <strong>{activeProvider.defaultModel}</strong>.
           </p>
-        ) : null}
+        ) : (
+          <p className="muted">
+            PromptCLI will ask for provider setup the first time someone enters
+            a natural-language request.
+          </p>
+        )}
 
         {error ? <p className="error-banner">{error}</p> : null}
         {status ? <p className="success-banner">{status}</p> : null}

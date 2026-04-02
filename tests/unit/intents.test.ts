@@ -26,5 +26,13 @@ describe("intent matching", () => {
     expect(plan?.steps).toHaveLength(2);
     expect(plan?.steps[1]?.command).toContain("git push");
   });
-});
 
+  it("extracts a search target for todo-style requests", () => {
+    const plan = buildIntentPlan(
+      session,
+      "search.text",
+      "find all TODOs in this repo"
+    );
+    expect(plan?.steps[0]?.command).toContain("TODO");
+  });
+});

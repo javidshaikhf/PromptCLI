@@ -1,84 +1,48 @@
-import { useEffect, useRef } from "react";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
+import { useEffect, useMemo, useRef } from "react";
+import type { ReactNode } from "react";
 import type { ShellSession } from "../../lib/contracts";
-import { resizeSession, writeSession } from "../../lib/tauri/bridge";
 
 interface TerminalViewProps {
   session: ShellSession;
+  auxiliaryOutput?: string;
+  children?: ReactNode;
 }
 
-export function TerminalView({ session }: TerminalViewProps): JSX.Element {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const renderedOutputRef = useRef("");
+function normalizeTranscript(output: string): string {
+  return output
+    .replace(/\u001b\][^\u0007]*\u0007/g, "")
+    .replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/\u001b[@-_]/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
+export function TerminalView({
+  session,
+  auxiliaryOutput = "",
+  children
+}: TerminalViewProps): JSX.Element {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const combinedOutput = useMemo(
+    () => normalizeTranscript(`${session.recentOutput}${auxiliaryOutput}`),
+    [auxiliaryOutput, session.recentOutput]
+  );
 
   useEffect(() => {
-    if (!hostRef.current) {
+    const node = scrollRef.current;
+    if (!node) {
       return;
     }
 
-    const terminal = new Terminal({
-      convertEol: true,
-      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-      fontSize: 14,
-      theme: {
-        background: "#07111f",
-        foreground: "#e5eef9",
-        cursor: "#ffd166",
-        selectionBackground: "#163255"
-      }
-    });
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.open(hostRef.current);
-    fitAddon.fit();
-    terminal.write(session.recentOutput);
-    renderedOutputRef.current = session.recentOutput;
+    node.scrollTop = node.scrollHeight;
+  }, [combinedOutput, children]);
 
-    terminal.onData((data) => {
-      void writeSession(session.id, data);
-    });
-
-    void resizeSession(session.id, terminal.cols, terminal.rows);
-
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit();
-      void resizeSession(session.id, terminal.cols, terminal.rows);
-    });
-    resizeObserver.observe(hostRef.current);
-
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
-
-    return () => {
-      resizeObserver.disconnect();
-      terminal.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
-    };
-  }, [session.id]);
-
-  useEffect(() => {
-    const terminal = terminalRef.current;
-    if (!terminal) {
-      return;
-    }
-
-    if (session.recentOutput.startsWith(renderedOutputRef.current)) {
-      const delta = session.recentOutput.slice(renderedOutputRef.current.length);
-      if (delta) {
-        terminal.write(delta);
-      }
-    } else {
-      terminal.reset();
-      terminal.write(session.recentOutput);
-      fitAddonRef.current?.fit();
-    }
-
-    renderedOutputRef.current = session.recentOutput;
-  }, [session.id, session.recentOutput]);
-
-  return <div className="terminal-surface" ref={hostRef} />;
+  return (
+    <div className="terminal-surface" ref={scrollRef}>
+      <div className="terminal-stream">
+        <span className="terminal-transcript">{combinedOutput}</span>
+        {children}
+      </div>
+    </div>
+  );
 }

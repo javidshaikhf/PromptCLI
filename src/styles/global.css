@@ -1,11 +1,8 @@
 :root {
-  color-scheme: dark;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(255, 209, 102, 0.12), transparent 28%),
-    radial-gradient(circle at top right, rgba(12, 206, 107, 0.08), transparent 24%),
-    linear-gradient(180deg, #09111c 0%, #04070d 100%);
-  color: #edf3fb;
+  color-scheme: light;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  background: #fcfbf8;
+  color: #30343a;
 }
 
 * {
@@ -22,7 +19,7 @@ body,
 
 body {
   min-height: 100vh;
-  background: transparent;
+  background: #fcfbf8;
 }
 
 button,
@@ -46,11 +43,6 @@ button {
   padding: 32px;
 }
 
-.onboarding-screen {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-
 .panel {
   background: rgba(8, 15, 26, 0.88);
   border: 1px solid rgba(149, 181, 216, 0.18);
@@ -58,16 +50,16 @@ button {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
 }
 
-.hero-panel,
-.onboarding-panel,
 .settings-panel,
-.plan-preview,
+.provider-setup-panel,
+.inline-review-card,
+.clarification-card,
+.history-drawer,
 .empty-state,
 .boot-screen .panel {
   padding: 28px;
 }
 
-.hero-panel h1,
 .boot-screen h1 {
   font-size: clamp(2.4rem, 5vw, 4.6rem);
   line-height: 0.95;
@@ -103,7 +95,7 @@ button {
 
 .field input,
 .field select,
-.prompt-bar input {
+.prompt-composer input {
   border-radius: 14px;
   border: 1px solid rgba(155, 181, 209, 0.22);
   background: rgba(12, 20, 35, 0.85);
@@ -132,88 +124,81 @@ button {
 
 .workspace {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: 1fr;
+  min-height: 100vh;
+  background: #fcfbf8;
 }
 
-.tab-strip {
+.terminal-shell {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(149, 181, 216, 0.14);
-  backdrop-filter: blur(18px);
-}
-
-.tab-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.tab-button {
-  border: 1px solid rgba(155, 181, 209, 0.18);
-  background: rgba(9, 18, 32, 0.7);
-  color: #b7cae3;
-  padding: 10px 14px;
-  border-radius: 999px;
-}
-
-.tab-button.is-active {
-  background: #10233c;
-  color: #fff;
-  border-color: rgba(255, 209, 102, 0.5);
-}
-
-.workspace-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 18px;
-  padding: 20px;
-}
-
-.terminal-column {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 16px;
+  min-height: 100vh;
+  padding: 0;
+  background: #fcfbf8;
 }
 
 .terminal-surface {
-  min-height: 60vh;
-  border-radius: 24px 24px 0 0;
-  overflow: hidden;
-  border: 1px solid rgba(149, 181, 216, 0.14);
-  background: #07111f;
-}
-
-.status-bar {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  border-radius: 0 0 24px 24px;
-  background: rgba(8, 15, 26, 0.88);
-  border: 1px solid rgba(149, 181, 216, 0.14);
-  border-top: none;
-  color: #95a8c2;
-}
-
-.prompt-bar {
-  display: grid;
-  grid-template-columns: 1fr 2fr auto;
-  gap: 16px;
-  align-items: center;
-  padding: 18px;
-  border-radius: 24px;
-  background: rgba(8, 15, 26, 0.9);
-  border: 1px solid rgba(149, 181, 216, 0.14);
-}
-
-.plan-preview {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-  max-height: calc(100vh - 120px);
+  flex: 1;
+  min-height: 100vh;
   overflow: auto;
+  background: #fcfbf8;
+  padding: 26px 30px 22px;
+}
+
+.terminal-stream {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  color: #34373d;
+  line-height: 1.65;
+  font-size: 1.05rem;
+}
+
+.terminal-transcript {
+  margin: 0;
+  white-space: inherit;
+  word-break: inherit;
+  font: inherit;
+  color: inherit;
+}
+
+.prompt-composer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+}
+
+.prompt-marker {
+  color: #34373d;
+  font-weight: 600;
+}
+
+.prompt-composer input {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  outline: none;
+  box-shadow: none;
+  color: #34373d;
+  width: 60ch;
+  max-width: 100%;
+  caret-color: #34373d;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+.prompt-composer input::placeholder {
+  color: transparent;
+}
+
+.inline-review-card,
+.clarification-card {
+  display: grid;
+  gap: 6px;
+  padding: 0 18px 14px;
+  background: transparent;
 }
 
 .pill-row,
@@ -258,7 +243,7 @@ button {
 .command-list,
 .simple-list {
   display: grid;
-  gap: 10px;
+  gap: 4px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -274,20 +259,41 @@ button {
   background: rgba(10, 19, 33, 0.75);
 }
 
+.command-list code,
 .command-card code {
   display: block;
   white-space: pre-wrap;
   word-break: break-word;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(1, 5, 10, 0.75);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: #ffd166;
 }
 
-.checkbox-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.clarification-card code,
+.clarification-card code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ffd166;
+}
+
+.terminal-meta {
+  margin: 0;
+  color: #7f93ad;
+  text-transform: lowercase;
+}
+
+.terminal-line {
+  margin: 0;
+}
+
+.terminal-note {
+  margin: 0;
+  color: #95a8c2;
 }
 
 .settings-overlay {
@@ -305,6 +311,12 @@ button {
   gap: 18px;
 }
 
+.provider-setup-panel {
+  width: min(680px, 100%);
+  display: grid;
+  gap: 18px;
+}
+
 .error-banner,
 .success-banner {
   padding: 14px 16px;
@@ -312,8 +324,14 @@ button {
 }
 
 .error-banner {
-  background: rgba(248, 113, 113, 0.12);
-  color: #ff9c9c;
+  background: rgba(248, 113, 113, 0.1);
+  color: #b7514f;
+}
+
+@media (max-width: 760px) {
+  .terminal-surface {
+    padding: 20px 18px 16px;
+  }
 }
 
 .success-banner {
@@ -326,13 +344,11 @@ button {
 }
 
 @media (max-width: 1080px) {
-  .workspace-body,
-  .onboarding-screen,
-  .prompt-bar {
+  .prompt-composer {
     grid-template-columns: 1fr;
   }
 
-  .workspace-body {
-    grid-template-columns: 1fr;
+  .prompt-label {
+    min-width: 0;
   }
 }

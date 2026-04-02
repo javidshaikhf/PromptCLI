@@ -2,8 +2,8 @@
 
 PromptCLI is a desktop terminal app for macOS and Windows that layers natural
 language planning on top of real shell sessions. Users work in persistent tabs,
-connect a model provider during onboarding, and review exact shell plans before
-anything runs.
+type either shell commands or plain English into one shell-like prompt, and
+review exact generated commands before anything runs.
 
 ## What is in this repo
 
@@ -15,8 +15,9 @@ anything runs.
 ## Current v1 architecture
 
 - Terminal-first workspace with persistent shell tabs
-- Dedicated PromptCLI command bar for natural-language requests
-- Onboarding for OpenAI or Anthropic provider setup
+- Single shell-like input for both shell commands and English requests
+- Inline reviewed-command cards plus a separate AI history drawer
+- Provider setup only when a natural-language request needs it
 - Local settings storage plus OS keychain-backed API key storage
 - Curated intents first, LLM shell planning as a fallback
 - Always-preview-before-run safety model

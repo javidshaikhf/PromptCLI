@@ -3,12 +3,19 @@ import type { AppSettings, ProviderConfig, ProviderId } from "../../lib/contract
 import { MODEL_CATALOG } from "../../lib/providers/catalog";
 import { getProviderAdapter } from "../../lib/providers";
 import { saveProviderKey, saveSettings } from "../../lib/tauri/bridge";
+import { upsertProviderConfig } from "../../lib/settings/defaults";
 
 interface OnboardingScreenProps {
+  currentSettings: AppSettings;
+  onClose: () => void;
   onConfigured: (settings: AppSettings) => void;
+  reason: "first_nl_request" | "settings";
 }
 
 export function OnboardingScreen({
+  currentSettings,
+  onClose,
+  reason,
   onConfigured
 }: OnboardingScreenProps): JSX.Element {
   const [providerId, setProviderId] = useState<ProviderId>("openai");
@@ -35,13 +42,7 @@ export function OnboardingScreen({
         keychainAccount: `${providerId}-default`
       };
 
-      const settings: AppSettings = {
-        activeProviderId: providerId,
-        providers: [providerConfig],
-        safetyMode: "preview_confirm",
-        defaultShellMac: "login_shell",
-        defaultShellWindows: "pwsh"
-      };
+      const settings = upsertProviderConfig(currentSettings, providerConfig);
 
       await saveProviderKey(
         providerId,
@@ -62,18 +63,26 @@ export function OnboardingScreen({
   }
 
   return (
-    <main className="screen onboarding-screen">
-      <section className="panel hero-panel">
-        <p className="eyebrow">PromptCLI</p>
-        <h1>Natural language for a real terminal.</h1>
-        <p className="muted">
-          Connect a provider once, then open a terminal window that can turn
-          requests like “push it to github” into reviewable shell plans.
-        </p>
-      </section>
+    <div className="settings-overlay">
+      <section className="panel provider-setup-panel">
+        <div className="space-between">
+          <div>
+            <p className="eyebrow">Provider setup</p>
+            <h2>
+              {reason === "first_nl_request"
+                ? "Connect a model before using English requests"
+                : "Add or update a provider"}
+            </h2>
+            <p className="muted">
+              Shell commands keep working without a provider. Natural-language
+              planning needs one configured provider.
+            </p>
+          </div>
+          <button className="ghost-button" onClick={onClose} type="button">
+            Close
+          </button>
+        </div>
 
-      <section className="panel onboarding-panel">
-        <h2>Set up your first provider</h2>
         <form className="stack-md" onSubmit={handleSubmit}>
           <label className="field">
             <span>Provider</span>
@@ -119,10 +128,10 @@ export function OnboardingScreen({
           {error ? <p className="error-banner">{error}</p> : null}
 
           <button className="primary-button" disabled={busy || !apiKey.trim()}>
-            {busy ? "Validating..." : "Validate and launch"}
+            {busy ? "Validating..." : "Save provider"}
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

@@ -3,7 +3,10 @@ export type SafetyMode = "preview_confirm";
 export type PlanRisk = "safe" | "elevated" | "destructive";
 export type StepKind = "intent" | "shell";
 export type SessionStatus = "starting" | "ready" | "closed" | "error";
-export type AppScreen = "boot" | "onboarding" | "workspace" | "settings";
+export type AppScreen = "boot" | "workspace" | "settings";
+export type InputClassification = "shell" | "natural_language" | "ambiguous";
+export type PlanSource = "intent" | "llm";
+export type ApprovalState = "pending" | "approved" | "cancelled" | "failed";
 
 export interface ProviderConfig {
   providerId: ProviderId;
@@ -13,7 +16,7 @@ export interface ProviderConfig {
 }
 
 export interface AppSettings {
-  activeProviderId: ProviderId;
+  activeProviderId: ProviderId | null;
   providers: ProviderConfig[];
   safetyMode: SafetyMode;
   defaultShellMac: "login_shell";
@@ -87,6 +90,40 @@ export interface PlannerInput {
   request: string;
 }
 
+export interface PromptSubmission {
+  rawInput: string;
+  normalizedInput: string;
+  classification: InputClassification;
+  override: "shell" | "natural_language" | null;
+}
+
+export interface ReviewedCommandPlan extends ExecutionPlan {
+  source: PlanSource;
+  approvalState: ApprovalState;
+  providerId: ProviderId | null;
+  model: string | null;
+  createdAt: string;
+}
+
+export interface AiHistoryEntry {
+  id: string;
+  request: string;
+  summary: string;
+  commands: string[];
+  risk: PlanRisk;
+  source: PlanSource;
+  status: ApprovalState | "needs_provider";
+  providerId: ProviderId | null;
+  model: string | null;
+  createdAt: string;
+}
+
+export interface ProviderSetupState {
+  open: boolean;
+  reason: "first_nl_request" | "settings";
+  pendingRequest: string | null;
+}
+
 export interface PlanExecutionState {
   status: "idle" | "generating" | "ready" | "running" | "failed";
   error: string | null;
@@ -106,4 +143,3 @@ export interface SessionErrorEvent {
   sessionId: string;
   message: string;
 }
-

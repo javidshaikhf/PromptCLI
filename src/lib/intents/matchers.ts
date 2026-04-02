@@ -18,7 +18,7 @@ const intentPatterns: Array<{
   {
     intent: "git.status",
     confidence: 0.9,
-    patterns: [/\bstatus\b/i, /\bwhat changed\b/i]
+    patterns: [/\bgit status\b/i, /\bwhat changed\b/i, /\brepo status\b/i]
   },
   {
     intent: "file.copy",
@@ -38,7 +38,7 @@ const intentPatterns: Array<{
   {
     intent: "file.mkdir",
     confidence: 0.8,
-    patterns: [/\bmake (a )?folder\b/i, /\bcreate (a )?directory\b/i]
+    patterns: [/\bmake (a )?folder\b/i, /\bcreate (a )?directory\b/i, /\bcreate (a )?folder\b/i]
   },
   {
     intent: "search.text",
@@ -58,7 +58,7 @@ const intentPatterns: Array<{
   {
     intent: "package.install",
     confidence: 0.9,
-    patterns: [/\binstall package\b/i, /\bnpm install\b/i, /\badd dependency\b/i]
+    patterns: [/\binstall package\b/i, /\bnpm install\b/i, /\badd dependency\b/i, /\binstall\b.+\bpackage\b/i]
   },
   {
     intent: "package.run",
@@ -86,4 +86,3 @@ export function matchIntent(input: string): IntentResult {
     missingInputs: []
   };
 }
-

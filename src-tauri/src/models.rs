@@ -12,7 +12,7 @@ pub struct ProviderConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
-    pub active_provider_id: String,
+    pub active_provider_id: Option<String>,
     pub providers: Vec<ProviderConfig>,
     pub safety_mode: String,
     pub default_shell_mac: String,
@@ -76,4 +76,3 @@ pub struct SessionErrorEvent {
     pub session_id: String,
     pub message: String,
 }
-

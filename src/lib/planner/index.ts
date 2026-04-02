@@ -1,4 +1,8 @@
-import type { AppSettings, ExecutionPlan, PlannerInput } from "../contracts";
+import type {
+  AppSettings,
+  PlannerInput,
+  ReviewedCommandPlan
+} from "../contracts";
 import { buildIntentPlan } from "../intents/builders";
 import { matchIntent } from "../intents/matchers";
 import { classifyPlanRisk } from "../policy/risk";
@@ -13,10 +17,11 @@ function getActiveProvider(settings: AppSettings) {
   );
 }
 
-export async function generateExecutionPlan(
+export async function generateReviewedCommandPlan(
   input: PlannerInput
-): Promise<ExecutionPlan> {
+): Promise<ReviewedCommandPlan> {
   const intent = matchIntent(input.request);
+  const activeProvider = getActiveProvider(input.settings);
 
   if (intent.matchedIntent && intent.confidence >= 0.85) {
     const localPlan = buildIntentPlan(
@@ -27,11 +32,17 @@ export async function generateExecutionPlan(
 
     if (localPlan) {
       localPlan.risk = classifyPlanRisk(localPlan);
-      return localPlan;
+      return {
+        ...localPlan,
+        source: "intent",
+        approvalState: "pending",
+        providerId: null,
+        model: null,
+        createdAt: new Date().toISOString()
+      };
     }
   }
 
-  const activeProvider = getActiveProvider(input.settings);
   if (!activeProvider) {
     throw new Error("Configure a provider before generating a plan.");
   }
@@ -62,6 +73,12 @@ export async function generateExecutionPlan(
     planned
   );
   normalized.risk = classifyPlanRisk(normalized);
-  return normalized;
+  return {
+    ...normalized,
+    source: "llm",
+    approvalState: "pending",
+    providerId: activeProvider.providerId,
+    model: activeProvider.defaultModel,
+    createdAt: new Date().toISOString()
+  };
 }
-

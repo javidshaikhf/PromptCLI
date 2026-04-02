@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    errors::{AppResult, PromptCliError},
+    errors::AppResult,
     models::AppSettings,
 };
 
@@ -27,15 +27,8 @@ pub fn load_settings(app: &AppHandle) -> AppResult<Option<AppSettings>> {
 }
 
 pub fn save_settings(app: &AppHandle, settings: &AppSettings) -> AppResult<()> {
-    if settings.providers.is_empty() {
-        return Err(PromptCliError::from(
-            "At least one provider must be configured.",
-        ));
-    }
-
     let path = settings_path(app)?;
     let contents = serde_json::to_string_pretty(settings)?;
     fs::write(path, contents)?;
     Ok(())
 }
-

@@ -1,86 +1,79 @@
-import type { ExecutionPlan, ShellSession } from "../../lib/contracts";
-import { PlanPreview } from "../promptcli/PlanPreview";
-import { PromptBar } from "../promptcli/PromptBar";
-import { TabStrip } from "./TabStrip";
+import type {
+  PromptSubmission,
+  ReviewedCommandPlan,
+  ShellSession
+} from "../../lib/contracts";
+import { PromptComposer } from "../promptcli/PromptComposer";
 import { TerminalView } from "./TerminalView";
 
 interface TerminalWorkspaceProps {
   sessions: ShellSession[];
   activeSessionId: string | null;
-  currentPlan: ExecutionPlan | null;
+  currentPlan: ReviewedCommandPlan | null;
+  pendingSubmission: PromptSubmission | null;
   plannerBusy: boolean;
   plannerError: string | null;
-  onSelectSession: (sessionId: string) => void;
-  onCreateSession: () => Promise<void> | void;
   onPromptSubmit: (value: string) => Promise<void>;
-  onApprovePlan: () => Promise<void>;
-  onCancelPlan: () => void;
-  onOpenSettings: () => void;
 }
 
 export function TerminalWorkspace({
   sessions,
   activeSessionId,
   currentPlan,
+  pendingSubmission,
   plannerBusy,
   plannerError,
-  onSelectSession,
-  onCreateSession,
-  onPromptSubmit,
-  onApprovePlan,
-  onCancelPlan,
-  onOpenSettings
+  onPromptSubmit
 }: TerminalWorkspaceProps): JSX.Element {
   const activeSession =
     sessions.find((session) => session.id === activeSessionId) ?? null;
 
+  const auxiliaryOutput = currentPlan
+    ? [
+        "\r\n[promptcli] review",
+        `[promptcli] ${currentPlan.summary}`,
+        `[promptcli] request: ${currentPlan.userRequest}`,
+        ...currentPlan.steps.map((step) => `[promptcli] ${step.command}`),
+        ...currentPlan.assumptions.map(
+          (assumption) => `[promptcli] assumption: ${assumption}`
+        ),
+        currentPlan.risk === "destructive"
+          ? "[promptcli] type yes-destructive to run or no to cancel"
+          : "[promptcli] type yes to run or no to cancel",
+        plannerError ? `[promptcli] error: ${plannerError}` : ""
+      ]
+        .filter(Boolean)
+        .join("\r\n") + "\r\n"
+    : pendingSubmission?.classification === "ambiguous"
+      ? [
+          "\r\n[promptcli] clarify",
+          `[promptcli] ${pendingSubmission.normalizedInput}`,
+          "[promptcli] type shell to run directly, ai to plan it, or cancel",
+          plannerError ? `[promptcli] error: ${plannerError}` : ""
+        ]
+          .filter(Boolean)
+          .join("\r\n") + "\r\n"
+      : plannerError
+        ? `\r\n[promptcli] error: ${plannerError}\r\n`
+        : "";
+
   return (
     <main className="workspace">
-      <TabStrip
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelect={onSelectSession}
-        onNewTab={() => void onCreateSession()}
-        onOpenSettings={onOpenSettings}
-      />
-
-      <section className="workspace-body">
-        <div className="terminal-column">
-          {activeSession ? (
-            <>
-              <TerminalView session={activeSession} />
-              <div className="status-bar">
-                <span>Shell: {activeSession.shell}</span>
-                <span>CWD: {activeSession.cwd}</span>
-                <span>Status: {activeSession.status}</span>
-              </div>
-            </>
-          ) : (
-            <div className="empty-state panel">
-              <h2>No terminal tabs yet</h2>
-              <p className="muted">
-                Create a tab to start a real shell session and use PromptCLI on
-                top of it.
-              </p>
-            </div>
-          )}
-
-          <PromptBar
-            busy={plannerBusy}
-            disabled={!activeSession}
-            onSubmit={onPromptSubmit}
-          />
-        </div>
-
-        <PlanPreview
-          busy={plannerBusy}
-          error={plannerError}
-          onApprove={onApprovePlan}
-          onCancel={onCancelPlan}
-          plan={currentPlan}
-        />
+      <section className="terminal-shell">
+        {activeSession ? (
+          <TerminalView auxiliaryOutput={auxiliaryOutput} session={activeSession}>
+            <PromptComposer
+              busy={plannerBusy}
+              disabled={!activeSession}
+              onSubmit={onPromptSubmit}
+            />
+          </TerminalView>
+        ) : (
+          <div className="empty-state">
+            <p>No terminal session available.</p>
+          </div>
+        )}
       </section>
     </main>
   );
 }
-

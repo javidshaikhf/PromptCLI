@@ -6,6 +6,7 @@ interface TerminalViewProps {
   session: ShellSession;
   auxiliaryOutput?: string;
   children?: ReactNode;
+  fontSize?: number;
 }
 
 const HIDDEN_PROMPT_SENTINEL = "__PROMPTCLI_PROMPT__";
@@ -31,6 +32,7 @@ function normalizeTranscript(output: string): string {
 export function TerminalView({
   session,
   auxiliaryOutput = "",
+  fontSize = 17,
   children
 }: TerminalViewProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -50,7 +52,7 @@ export function TerminalView({
 
   return (
     <div className="terminal-surface" ref={scrollRef}>
-      <div className="terminal-stream">
+      <div className="terminal-stream" style={{ fontSize: `${fontSize}px` }}>
         <span className="terminal-transcript">{combinedOutput}</span>
         {children}
       </div>

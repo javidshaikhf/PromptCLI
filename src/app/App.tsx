@@ -256,6 +256,7 @@ function reducer(state: AppState, action: Action): AppState {
 export function App(): JSX.Element {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [booting, setBooting] = useState(true);
+  const [terminalFontSize, setTerminalFontSize] = useState(17);
 
   useEffect(() => {
     let cancelled = false;
@@ -277,6 +278,36 @@ export function App(): JSX.Element {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleZoomKeydown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) {
+        return;
+      }
+
+      if (event.key === "=" || event.key === "+") {
+        event.preventDefault();
+        setTerminalFontSize((current) => Math.min(current + 1, 28));
+        return;
+      }
+
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        setTerminalFontSize((current) => Math.max(current - 1, 12));
+        return;
+      }
+
+      if (event.key === "0") {
+        event.preventDefault();
+        setTerminalFontSize(17);
+      }
+    }
+
+    window.addEventListener("keydown", handleZoomKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleZoomKeydown);
     };
   }, []);
 
@@ -565,6 +596,7 @@ export function App(): JSX.Element {
         }
         plannerError={state.planState.error}
         sessions={state.sessions}
+        terminalFontSize={terminalFontSize}
       />
 
       {state.screen === "settings" ? (

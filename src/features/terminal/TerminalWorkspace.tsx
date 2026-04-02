@@ -14,6 +14,7 @@ interface TerminalWorkspaceProps {
   plannerBusy: boolean;
   plannerError: string | null;
   onPromptSubmit: (value: string) => Promise<void>;
+  terminalFontSize: number;
 }
 
 export function TerminalWorkspace({
@@ -23,7 +24,8 @@ export function TerminalWorkspace({
   pendingSubmission,
   plannerBusy,
   plannerError,
-  onPromptSubmit
+  onPromptSubmit,
+  terminalFontSize
 }: TerminalWorkspaceProps): JSX.Element {
   const activeSession =
     sessions.find((session) => session.id === activeSessionId) ?? null;
@@ -61,7 +63,11 @@ export function TerminalWorkspace({
     <main className="workspace">
       <section className="terminal-shell">
         {activeSession ? (
-          <TerminalView auxiliaryOutput={auxiliaryOutput} session={activeSession}>
+          <TerminalView
+            auxiliaryOutput={auxiliaryOutput}
+            fontSize={terminalFontSize}
+            session={activeSession}
+          >
             <PromptComposer
               busy={plannerBusy}
               cwd={activeSession.cwd}

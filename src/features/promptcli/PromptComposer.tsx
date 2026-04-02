@@ -2,12 +2,14 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 
 interface PromptComposerProps {
   busy?: boolean;
+  cwd?: string;
   disabled?: boolean;
   onSubmit: (value: string) => Promise<void> | void;
 }
 
 export function PromptComposer({
   busy,
+  cwd,
   disabled,
   onSubmit
 }: PromptComposerProps): JSX.Element {
@@ -33,6 +35,7 @@ export function PromptComposer({
 
   return (
     <form className="prompt-composer" onSubmit={handleSubmit}>
+      {cwd ? <span className="prompt-path">{cwd}</span> : null}
       <span className="prompt-marker" aria-hidden="true">
         &gt;
       </span>

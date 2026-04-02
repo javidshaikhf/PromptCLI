@@ -64,6 +64,7 @@ export function TerminalWorkspace({
           <TerminalView auxiliaryOutput={auxiliaryOutput} session={activeSession}>
             <PromptComposer
               busy={plannerBusy}
+              cwd={activeSession.cwd}
               disabled={!activeSession}
               onSubmit={onPromptSubmit}
             />

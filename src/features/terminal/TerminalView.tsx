@@ -8,13 +8,24 @@ interface TerminalViewProps {
   children?: ReactNode;
 }
 
+const HIDDEN_PROMPT_SENTINEL = "__PROMPTCLI_PROMPT__";
+
 function normalizeTranscript(output: string): string {
-  return output
+  const clearMarkers = [...output.matchAll(/\u001bc|\u001b\[2J|\u001b\[3J/g)];
+  const lastClearMarker = clearMarkers.at(-1);
+  const relevantOutput =
+    lastClearMarker && lastClearMarker.index !== undefined
+      ? output.slice(lastClearMarker.index + lastClearMarker[0].length)
+      : output;
+
+  return relevantOutput
+    .replaceAll(HIDDEN_PROMPT_SENTINEL, "")
     .replace(/\u001b\][^\u0007]*\u0007/g, "")
     .replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "")
     .replace(/\u001b[@-_]/g, "")
     .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n");
+    .replace(/\r/g, "\n")
+    .replace(/^\s+/, "");
 }
 
 export function TerminalView({

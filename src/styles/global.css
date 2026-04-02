@@ -167,6 +167,11 @@ button {
   gap: 12px;
   padding: 0;
   background: transparent;
+  flex-wrap: wrap;
+}
+
+.prompt-path {
+  color: #7b8087;
 }
 
 .prompt-marker {

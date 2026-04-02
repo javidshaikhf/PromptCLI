@@ -15,6 +15,8 @@ use crate::{
     models::{ExecutionPlan, SessionErrorEvent, SessionExitEvent, SessionOutputEvent, ShellSession},
 };
 
+const SHELL_PROMPT_SENTINEL: &str = "__PROMPTCLI_PROMPT__";
+
 #[cfg(target_os = "windows")]
 fn command_exists(command: &str) -> bool {
     std::process::Command::new("where")
@@ -24,25 +26,93 @@ fn command_exists(command: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn shell_name(shell: &str) -> String {
+    std::path::Path::new(shell)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(shell)
+        .to_ascii_lowercase()
+}
+
 fn default_shell() -> (String, Vec<String>) {
     #[cfg(target_os = "macos")]
     {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-        return (shell, vec!["-l".to_string()]);
+        let name = shell_name(&shell);
+
+        if name.contains("zsh") {
+            return (shell, vec!["-f".to_string()]);
+        }
+
+        if name.contains("bash") {
+            return (
+                shell,
+                vec![
+                    "--noprofile".to_string(),
+                    "--norc".to_string(),
+                    "-i".to_string(),
+                ],
+            );
+        }
+
+        return (shell, Vec::new());
     }
 
     #[cfg(target_os = "windows")]
     {
         if command_exists("pwsh.exe") {
-            return ("pwsh.exe".to_string(), Vec::new());
+            return (
+                "pwsh.exe".to_string(),
+                vec!["-NoLogo".to_string(), "-NoProfile".to_string()],
+            );
         }
-        return ("powershell.exe".to_string(), Vec::new());
+        return (
+            "powershell.exe".to_string(),
+            vec!["-NoLogo".to_string(), "-NoProfile".to_string()],
+        );
     }
 
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
-        return (shell, vec!["-l".to_string()]);
+        let name = shell_name(&shell);
+
+        if name.contains("bash") {
+            return (
+                shell,
+                vec![
+                    "--noprofile".to_string(),
+                    "--norc".to_string(),
+                    "-i".to_string(),
+                ],
+            );
+        }
+
+        return (shell, Vec::new());
+    }
+}
+
+fn configure_shell_environment(command: &mut CommandBuilder, shell: &str) {
+    let name = shell_name(shell);
+
+    #[cfg(target_os = "windows")]
+    {
+        if name.contains("pwsh") || name.contains("powershell") {
+            command.env("PROMPTCLI_PROMPT", SHELL_PROMPT_SENTINEL);
+            return;
+        }
+    }
+
+    if name.contains("zsh") {
+        command.env("PROMPT", SHELL_PROMPT_SENTINEL);
+        command.env("RPROMPT", "");
+        command.env("PS1", SHELL_PROMPT_SENTINEL);
+        command.env("PROMPT_EOL_MARK", "");
+        return;
+    }
+
+    if name.contains("bash") || name.contains("sh") {
+        command.env("PS1", SHELL_PROMPT_SENTINEL);
     }
 }
 
@@ -96,6 +166,7 @@ impl SessionManager {
             command.arg(arg);
         }
         command.cwd(cwd);
+        configure_shell_environment(&mut command, &shell);
 
         let child = pair.slave.spawn_command(command)?;
         let mut reader = pair.master.try_clone_reader()?;

@@ -12,19 +12,34 @@ const SYSTEM_PROMPT = [
   "Build a shell execution plan and never assume execution happens automatically."
 ].join(" ");
 
+const REQUEST_TIMEOUT_MS = 15000;
+
 async function callAnthropic(
   apiKey: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  return fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
-    },
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Anthropic request timed out. Check your network and try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 function extractText(content: unknown): string {
@@ -131,4 +146,3 @@ export const anthropicAdapter: ProviderAdapter = {
     return JSON.parse(rawText) as ExecutionPlan;
   }
 };
-

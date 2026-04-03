@@ -12,6 +12,11 @@ describe("prompt classification", () => {
     expect(result.classification).toBe("natural_language");
   });
 
+  it("treats simple greetings as natural language", () => {
+    const result = classifyPromptInput("hi");
+    expect(result.classification).toBe("natural_language");
+  });
+
   it("marks short unclear inputs as ambiguous", () => {
     const result = classifyPromptInput("status");
     expect(result.classification).toBe("ambiguous");
@@ -24,4 +29,3 @@ describe("prompt classification", () => {
     );
   });
 });
-

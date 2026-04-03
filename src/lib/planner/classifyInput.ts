@@ -49,6 +49,7 @@ const ambiguousTerms = new Set([
 ]);
 
 const naturalLanguageIndicators = [
+  /^(hi|hello|hey)\b/i,
   /\bplease\b/i,
   /\bcan you\b/i,
   /\bhow do i\b/i,

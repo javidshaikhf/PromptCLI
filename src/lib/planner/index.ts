@@ -47,7 +47,9 @@ export async function generateReviewedCommandPlan(
     throw new Error("Configure a provider before generating a plan.");
   }
 
-  const apiKey = await getProviderKey(activeProvider.providerId);
+  const apiKey =
+    input.apiKeyOverride?.trim() ||
+    (await getProviderKey(activeProvider.providerId));
   if (!apiKey) {
     throw new Error("Provider API key was not found in secure storage.");
   }

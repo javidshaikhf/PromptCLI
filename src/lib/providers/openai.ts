@@ -14,6 +14,8 @@ const SYSTEM_PROMPT = [
   "Include assumptions and missingInputs when context is incomplete."
 ].join(" ");
 
+const REQUEST_TIMEOUT_MS = 15000;
+
 function extractText(output: unknown): string {
   if (!Array.isArray(output)) {
     return "";
@@ -46,14 +48,27 @@ async function callOpenAI(
   apiKey: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  return fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("OpenAI request timed out. Check your network and try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 export const openAIAdapter: ProviderAdapter = {
@@ -139,4 +154,3 @@ export const openAIAdapter: ProviderAdapter = {
     return JSON.parse(rawText) as ExecutionPlan;
   }
 };
-

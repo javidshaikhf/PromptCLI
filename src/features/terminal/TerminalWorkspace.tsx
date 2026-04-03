@@ -53,7 +53,7 @@ export function TerminalWorkspace({
       ? [
           "\r\n[promptcli] clarify",
           `[promptcli] ${pendingSubmission.normalizedInput}`,
-          "[promptcli] type shell to run directly, ai to plan it, or cancel",
+          "[promptcli] type shell to run directly, ai to plan it, /setup to configure a provider, or cancel",
           plannerError ? `[promptcli] error: ${plannerError}` : ""
         ]
           .filter(Boolean)

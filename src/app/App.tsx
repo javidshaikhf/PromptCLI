@@ -5,6 +5,7 @@ import type {
   AppSettings,
   PlanExecutionState,
   PromptSubmission,
+  ProviderId,
   ProviderSetupState,
   ReviewedCommandPlan,
   ShellSession
@@ -264,6 +265,9 @@ export function App(): JSX.Element {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [booting, setBooting] = useState(true);
   const [terminalFontSize, setTerminalFontSize] = useState(17);
+  const [providerKeyCache, setProviderKeyCache] = useState<
+    Partial<Record<ProviderId, string>>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -387,7 +391,8 @@ export function App(): JSX.Element {
 
   async function handleNaturalLanguageSubmission(
     submission: PromptSubmission,
-    settingsOverride?: AppSettings
+    settingsOverride?: AppSettings,
+    apiKeyOverride?: string | null
   ) {
     if (!activeSession) {
       return;
@@ -424,7 +429,12 @@ export function App(): JSX.Element {
       const plan = await generateReviewedCommandPlan({
         request: submission.normalizedInput,
         session: activeSession,
-        settings: effectiveSettings
+        settings: effectiveSettings,
+        apiKeyOverride:
+          apiKeyOverride ??
+          (effectiveSettings.activeProviderId
+            ? providerKeyCache[effectiveSettings.activeProviderId]
+            : null)
       });
       dispatch({ type: "plan-ready", plan });
       dispatch({ type: "push-history", entry: planToHistoryEntry(plan) });
@@ -455,6 +465,15 @@ export function App(): JSX.Element {
 
   async function handlePromptSubmit(value: string) {
     const normalizedValue = value.trim().toLowerCase();
+
+    if (normalizedValue === "/" || normalizedValue === "/help") {
+      dispatch({ type: "plan-cleared" });
+      dispatch({
+        type: "plan-error",
+        error: "Available commands: /setup. Type shell, ai, or cancel when PromptCLI asks for clarification."
+      });
+      return;
+    }
 
     if (
       normalizedValue === "/setup" ||
@@ -513,7 +532,7 @@ export function App(): JSX.Element {
 
       dispatch({
         type: "plan-error",
-        error: "Type shell to run directly, ai to plan it, or cancel."
+        error: "Type shell to run directly, ai to plan it, /setup to configure a provider, or cancel."
       });
       return;
     }
@@ -642,8 +661,12 @@ export function App(): JSX.Element {
         <OnboardingScreen
           currentSettings={state.settings}
           onClose={() => dispatch({ type: "close-provider-setup" })}
-          onConfigured={(settings) => {
+          onConfigured={(settings, providerId, apiKey) => {
             const pendingRequest = state.providerSetup.pendingRequest;
+            setProviderKeyCache((current) => ({
+              ...current,
+              [providerId]: apiKey
+            }));
             dispatch({ type: "set-settings", settings });
             dispatch({ type: "close-provider-setup" });
 
@@ -655,7 +678,8 @@ export function App(): JSX.Element {
                   classification: "natural_language",
                   override: null
                 },
-                settings
+                settings,
+                apiKey
               );
             }
           }}

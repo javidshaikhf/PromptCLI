@@ -88,6 +88,7 @@ export interface PlannerInput {
   session: ShellSession;
   settings: AppSettings;
   request: string;
+  apiKeyOverride?: string | null;
 }
 
 export interface PromptSubmission {

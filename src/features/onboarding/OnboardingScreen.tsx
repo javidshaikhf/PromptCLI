@@ -5,11 +5,36 @@ import { getProviderAdapter } from "../../lib/providers";
 import { upsertProviderConfig } from "../../lib/settings/defaults";
 import { saveProviderKey, saveSettings } from "../../lib/tauri/bridge";
 
+const STEP_TIMEOUT_MS = 15000;
+
 interface OnboardingScreenProps {
   currentSettings: AppSettings;
   onClose: () => void;
-  onConfigured: (settings: AppSettings) => void;
+  onConfigured: (
+    settings: AppSettings,
+    providerId: ProviderId,
+    apiKey: string
+  ) => void;
   reason: "first_nl_request" | "settings";
+}
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out. Please try again.`));
+    }, STEP_TIMEOUT_MS);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
 }
 
 export function OnboardingScreen({
@@ -23,6 +48,7 @@ export function OnboardingScreen({
   const [model, setModel] = useState(MODEL_CATALOG.openai[0].id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("press Enter to continue");
 
   const models = useMemo(() => MODEL_CATALOG[providerId], [providerId]);
 
@@ -43,10 +69,14 @@ export function OnboardingScreen({
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setStatus("validating provider...");
 
     try {
       const provider = getProviderAdapter(providerId);
-      await provider.validateKey({ apiKey, model });
+      await withTimeout(
+        provider.validateKey({ apiKey: apiKey.trim(), model }),
+        `${providerId} validation`
+      );
 
       const providerConfig: ProviderConfig = {
         providerId,
@@ -57,19 +87,28 @@ export function OnboardingScreen({
 
       const settings = upsertProviderConfig(currentSettings, providerConfig);
 
-      await saveProviderKey(
-        providerId,
-        providerConfig.keychainAccount,
-        apiKey.trim()
+      setStatus("saving api key...");
+      await withTimeout(
+        saveProviderKey(
+          providerId,
+          providerConfig.keychainAccount,
+          apiKey.trim()
+        ),
+        "Saving API key"
       );
-      await saveSettings(settings);
-      onConfigured(settings);
+
+      setStatus("saving local settings...");
+      await withTimeout(saveSettings(settings), "Saving settings");
+
+      setStatus("setup complete");
+      onConfigured(settings, providerId, apiKey.trim());
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
           ? submissionError.message
           : "Failed to validate and store the provider configuration."
       );
+      setStatus("press Enter to continue");
     } finally {
       setBusy(false);
     }
@@ -141,9 +180,7 @@ export function OnboardingScreen({
           </label>
 
           <div className="terminal-setup-copy">
-            <p>
-              [promptcli] {busy ? "validating and saving..." : "press Enter to continue"}
-            </p>
+            <p>[promptcli] {status}</p>
             {error ? <p className="terminal-setup-error">[promptcli] error: {error}</p> : null}
           </div>
 

@@ -1,9 +1,9 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { AppSettings, ProviderConfig, ProviderId } from "../../lib/contracts";
 import { MODEL_CATALOG } from "../../lib/providers/catalog";
 import { getProviderAdapter } from "../../lib/providers";
-import { saveProviderKey, saveSettings } from "../../lib/tauri/bridge";
 import { upsertProviderConfig } from "../../lib/settings/defaults";
+import { saveProviderKey, saveSettings } from "../../lib/tauri/bridge";
 
 interface OnboardingScreenProps {
   currentSettings: AppSettings;
@@ -25,6 +25,19 @@ export function OnboardingScreen({
   const [error, setError] = useState<string | null>(null);
 
   const models = useMemo(() => MODEL_CATALOG[providerId], [providerId]);
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && reason === "settings" && !busy) {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [busy, onClose, reason]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,30 +76,28 @@ export function OnboardingScreen({
   }
 
   return (
-    <div className="settings-overlay">
-      <section className="panel provider-setup-panel">
-        <div className="space-between">
-          <div>
-            <p className="eyebrow">Provider setup</p>
-            <h2>
-              {reason === "first_nl_request"
-                ? "Connect a model before using English requests"
-                : "Add or update a provider"}
-            </h2>
-            <p className="muted">
-              Shell commands keep working without a provider. Natural-language
-              planning needs one configured provider.
-            </p>
-          </div>
-          <button className="ghost-button" onClick={onClose} type="button">
-            Close
-          </button>
+    <div className="terminal-setup-overlay">
+      <section className="terminal-setup-screen">
+        <div className="terminal-setup-copy">
+          <p>[promptcli] setup</p>
+          <p>
+            {reason === "first_nl_request"
+              ? "[promptcli] connect a model before using natural language"
+              : "[promptcli] configure or update a model provider"}
+          </p>
+          <p>[promptcli] shell commands still work without a provider</p>
+          <p>[promptcli] choose a provider, paste the key, then press Enter to save</p>
+          {reason === "settings" ? (
+            <p>[promptcli] press Esc to cancel</p>
+          ) : null}
         </div>
 
-        <form className="stack-md" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Provider</span>
+        <form className="terminal-setup-form" onSubmit={handleSubmit}>
+          <label className="terminal-setup-row">
+            <span className="terminal-setup-label">provider</span>
+            <span className="terminal-setup-separator">&gt;</span>
             <select
+              disabled={busy}
               value={providerId}
               onChange={(event) => {
                 const nextProvider = event.target.value as ProviderId;
@@ -94,26 +105,30 @@ export function OnboardingScreen({
                 setModel(MODEL_CATALOG[nextProvider][0].id);
               }}
             >
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
+              <option value="openai">openai</option>
+              <option value="anthropic">anthropic</option>
             </select>
           </label>
 
-          <label className="field">
-            <span>API key</span>
+          <label className="terminal-setup-row">
+            <span className="terminal-setup-label">api_key</span>
+            <span className="terminal-setup-separator">&gt;</span>
             <input
+              autoComplete="off"
+              disabled={busy}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder="paste api key"
+              required
               type="password"
               value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder="Paste your provider API key"
-              autoComplete="off"
-              required
             />
           </label>
 
-          <label className="field">
-            <span>Default model</span>
+          <label className="terminal-setup-row">
+            <span className="terminal-setup-label">model</span>
+            <span className="terminal-setup-separator">&gt;</span>
             <select
+              disabled={busy}
               value={model}
               onChange={(event) => setModel(event.target.value)}
             >
@@ -125,10 +140,15 @@ export function OnboardingScreen({
             </select>
           </label>
 
-          {error ? <p className="error-banner">{error}</p> : null}
+          <div className="terminal-setup-copy">
+            <p>
+              [promptcli] {busy ? "validating and saving..." : "press Enter to continue"}
+            </p>
+            {error ? <p className="terminal-setup-error">[promptcli] error: {error}</p> : null}
+          </div>
 
-          <button className="primary-button" disabled={busy || !apiKey.trim()}>
-            {busy ? "Validating..." : "Save provider"}
+          <button className="terminal-setup-submit" disabled={busy || !apiKey.trim()}>
+            Save provider
           </button>
         </form>
       </section>

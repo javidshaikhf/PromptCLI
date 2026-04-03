@@ -15,6 +15,8 @@ interface TerminalWorkspaceProps {
   plannerError: string | null;
   onPromptSubmit: (value: string) => Promise<void>;
   terminalFontSize: number;
+  providerSetupOpen: boolean;
+  providerConfigured: boolean;
 }
 
 export function TerminalWorkspace({
@@ -25,12 +27,14 @@ export function TerminalWorkspace({
   plannerBusy,
   plannerError,
   onPromptSubmit,
-  terminalFontSize
+  terminalFontSize,
+  providerSetupOpen,
+  providerConfigured
 }: TerminalWorkspaceProps): JSX.Element {
   const activeSession =
     sessions.find((session) => session.id === activeSessionId) ?? null;
 
-  const auxiliaryOutput = currentPlan
+  const auxiliaryLines = currentPlan
     ? [
         "\r\n[promptcli] review",
         `[promptcli] ${currentPlan.summary}`,
@@ -45,7 +49,6 @@ export function TerminalWorkspace({
         plannerError ? `[promptcli] error: ${plannerError}` : ""
       ]
         .filter(Boolean)
-        .join("\r\n") + "\r\n"
     : pendingSubmission?.classification === "ambiguous"
       ? [
           "\r\n[promptcli] clarify",
@@ -54,10 +57,19 @@ export function TerminalWorkspace({
           plannerError ? `[promptcli] error: ${plannerError}` : ""
         ]
           .filter(Boolean)
-          .join("\r\n") + "\r\n"
       : plannerError
-        ? `\r\n[promptcli] error: ${plannerError}\r\n`
-        : "";
+        ? [`\r\n[promptcli] error: ${plannerError}`]
+        : [];
+
+  if (!providerConfigured && !providerSetupOpen && !currentPlan && !pendingSubmission) {
+    auxiliaryLines.push(
+      "\r\n[promptcli] no provider configured",
+      "[promptcli] type /setup to connect OpenAI or Anthropic"
+    );
+  }
+
+  const auxiliaryOutput =
+    auxiliaryLines.length > 0 ? `${auxiliaryLines.join("\r\n")}\r\n` : "";
 
   return (
     <main className="workspace">

@@ -113,7 +113,14 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         screen: "workspace",
-        settings: action.settings
+        settings: action.settings,
+        providerSetup: hasConfiguredProvider(action.settings)
+          ? state.providerSetup
+          : {
+              open: true,
+              reason: "settings",
+              pendingRequest: null
+            }
       };
     case "set-settings":
       return {
@@ -449,6 +456,21 @@ export function App(): JSX.Element {
   async function handlePromptSubmit(value: string) {
     const normalizedValue = value.trim().toLowerCase();
 
+    if (
+      normalizedValue === "/setup" ||
+      normalizedValue === "setup" ||
+      normalizedValue === "/provider" ||
+      normalizedValue === "/providers"
+    ) {
+      dispatch({
+        type: "open-provider-setup",
+        reason: "settings",
+        pendingRequest: null
+      });
+      dispatch({ type: "plan-cleared" });
+      return;
+    }
+
     if (state.currentPlan) {
       if (normalizedValue === "no" || normalizedValue === "cancel") {
         handleCancelPlan();
@@ -595,6 +617,8 @@ export function App(): JSX.Element {
           state.planState.status === "running"
         }
         plannerError={state.planState.error}
+        providerConfigured={hasConfiguredProvider(state.settings)}
+        providerSetupOpen={state.providerSetup.open}
         sessions={state.sessions}
         terminalFontSize={terminalFontSize}
       />

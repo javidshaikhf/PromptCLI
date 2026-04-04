@@ -7,6 +7,15 @@ interface PromptComposerProps {
   onSubmit: (value: string) => Promise<void> | void;
 }
 
+function formatPromptPath(cwd?: string): string {
+  const trimmed = cwd?.trim();
+  if (!trimmed) {
+    return "/";
+  }
+
+  return trimmed;
+}
+
 export function PromptComposer({
   busy,
   cwd,
@@ -15,6 +24,7 @@ export function PromptComposer({
 }: PromptComposerProps): JSX.Element {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const displayPath = formatPromptPath(cwd);
 
   useEffect(() => {
     if (!disabled) {
@@ -35,17 +45,21 @@ export function PromptComposer({
 
   return (
     <form className="prompt-composer" onSubmit={handleSubmit}>
-      {cwd ? <span className="prompt-path">{cwd}</span> : null}
-      <span className="prompt-marker" aria-hidden="true">
-        &gt;
-      </span>
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder=""
-        disabled={disabled || busy}
-      />
+      <div className="prompt-path-line" title={cwd || displayPath}>
+        {displayPath}
+      </div>
+      <div className="prompt-input-row">
+        <span className="prompt-marker" aria-hidden="true">
+          &gt;
+        </span>
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder=""
+          disabled={disabled || busy}
+        />
+      </div>
     </form>
   );
 }

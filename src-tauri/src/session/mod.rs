@@ -133,6 +133,34 @@ fn current_os() -> String {
     }
 }
 
+fn default_working_directory() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(user_profile) = std::env::var("USERPROFILE") {
+            if !user_profile.trim().is_empty() {
+                return PathBuf::from(user_profile);
+            }
+        }
+
+        let home_drive = std::env::var("HOMEDRIVE").unwrap_or_default();
+        let home_path = std::env::var("HOMEPATH").unwrap_or_default();
+        if !home_drive.is_empty() && !home_path.is_empty() {
+            return PathBuf::from(format!("{home_drive}{home_path}"));
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            if !home.trim().is_empty() {
+                return PathBuf::from(home);
+            }
+        }
+    }
+
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
 struct SessionHandle {
     meta: Mutex<ShellSession>,
     writer: Mutex<Box<dyn Write + Send>>,
@@ -149,7 +177,7 @@ pub struct SessionManager {
 impl SessionManager {
     pub fn create_session(&self, app: AppHandle) -> AppResult<ShellSession> {
         let session_id = Uuid::new_v4().to_string();
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let cwd = default_working_directory();
         let cwd_string = cwd.display().to_string();
         let (shell, args) = default_shell();
 

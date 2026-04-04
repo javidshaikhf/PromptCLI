@@ -162,21 +162,32 @@ button {
 }
 
 .prompt-composer {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 12px;
+  display: grid;
+  gap: 2px;
   padding: 0;
   background: transparent;
-  flex-wrap: wrap;
 }
 
-.prompt-path {
-  color: #7b8087;
+.prompt-path-line {
+  color: #5c6168;
+  font-weight: 500;
+  min-width: 0;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-input-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
 }
 
 .prompt-marker {
   color: #34373d;
   font-weight: 600;
+  flex: 0 0 auto;
 }
 
 .prompt-composer input {
@@ -187,8 +198,10 @@ button {
   outline: none;
   box-shadow: none;
   color: #34373d;
-  width: 60ch;
-  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 12ch;
+  width: auto;
+  max-width: none;
   caret-color: #34373d;
   font: inherit;
   vertical-align: baseline;

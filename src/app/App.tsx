@@ -39,11 +39,103 @@ interface AppState {
   providerSetup: ProviderSetupState;
 }
 
+function extractSessionCwd(data: string): string | null {
+  const matches = [...data.matchAll(/\u001b\]7;file:\/\/[^/]*([^\u0007]*)\u0007/g)];
+  const encodedPath = matches.at(-1)?.[1];
+  if (!encodedPath) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return encodedPath;
+  }
+}
+
+function normalizeShellInput(rawCommand: string): string {
+  return rawCommand
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .trim();
+}
+
+function inferHomeDirectory(currentCwd: string): string {
+  const macHome = currentCwd.match(/^\/Users\/[^/]+/);
+  if (macHome) {
+    return macHome[0];
+  }
+
+  const windowsHome = currentCwd.match(/^[A-Za-z]:\\Users\\[^\\]+/);
+  if (windowsHome) {
+    return windowsHome[0];
+  }
+
+  return currentCwd || "/";
+}
+
+function resolvePosixPath(basePath: string, inputPath: string): string {
+  const parts = inputPath.startsWith("/")
+    ? inputPath.split("/")
+    : `${basePath}/${inputPath}`.split("/");
+
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (!part || part === ".") {
+      continue;
+    }
+
+    if (part === "..") {
+      resolved.pop();
+      continue;
+    }
+
+    resolved.push(part);
+  }
+
+  return `/${resolved.join("/")}` || "/";
+}
+
+function inferNextCwd(command: string, currentCwd: string): string | null {
+  const trimmed = command.trim();
+  if (!/^cd(?:\s|$)/.test(trimmed) || /[|&;<>]/.test(trimmed)) {
+    return null;
+  }
+
+  const rawTarget = trimmed.replace(/^cd\s*/, "").trim();
+  const homeDirectory = inferHomeDirectory(currentCwd);
+
+  if (!rawTarget) {
+    return homeDirectory;
+  }
+
+  let target = rawTarget;
+  const quote = target[0];
+  if ((quote === "'" || quote === '"') && target.at(-1) === quote) {
+    target = target.slice(1, -1);
+  }
+
+  if (target === "~") {
+    return homeDirectory;
+  }
+
+  if (target.startsWith("~/")) {
+    return resolvePosixPath(homeDirectory, target.slice(2));
+  }
+
+  if (target.startsWith("/")) {
+    return resolvePosixPath("/", target);
+  }
+
+  return resolvePosixPath(currentCwd, target);
+}
+
 type Action =
   | { type: "booted"; settings: AppSettings }
   | { type: "set-settings"; settings: AppSettings }
   | { type: "add-session"; session: ShellSession }
   | { type: "select-session"; sessionId: string }
+  | { type: "update-cwd"; sessionId: string; cwd: string }
   | { type: "update-output"; sessionId: string; data: string }
   | { type: "session-exit"; sessionId: string }
   | { type: "session-error"; sessionId: string; message: string }
@@ -140,6 +232,15 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         activeSessionId: action.sessionId
       };
+    case "update-cwd":
+      return {
+        ...state,
+        sessions: state.sessions.map((session) =>
+          session.id === action.sessionId
+            ? { ...session, cwd: action.cwd }
+            : session
+        )
+      };
     case "update-output":
       return {
         ...state,
@@ -147,6 +248,7 @@ function reducer(state: AppState, action: Action): AppState {
           session.id === action.sessionId
             ? {
                 ...session,
+                cwd: extractSessionCwd(action.data) ?? session.cwd,
                 recentOutput: `${session.recentOutput}${action.data}`.slice(-12000),
                 status: "ready"
               }
@@ -385,8 +487,26 @@ export function App(): JSX.Element {
       return;
     }
 
+    const command = normalizeShellInput(rawCommand);
     dispatch({ type: "plan-cleared" });
-    await writeSession(activeSession.id, `${rawCommand.trim()}\n`);
+    if (/^(clear|cls)$/i.test(command)) {
+      dispatch({
+        type: "update-output",
+        sessionId: activeSession.id,
+        data: "\u001bc"
+      });
+    }
+
+    const nextCwd = inferNextCwd(command, activeSession.cwd);
+    if (nextCwd) {
+      dispatch({
+        type: "update-cwd",
+        sessionId: activeSession.id,
+        cwd: nextCwd
+      });
+    }
+
+    await writeSession(activeSession.id, `${command}\n`);
   }
 
   async function handleNaturalLanguageSubmission(

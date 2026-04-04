@@ -41,8 +41,7 @@ pub fn get_provider_key(app: &AppHandle, provider_id: &str) -> AppResult<Option<
 
     match entry(&provider.keychain_account)?.get_password() {
         Ok(password) => Ok(Some(password)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(keyring::Error::NoEntry) => Ok(provider.api_key_fallback.clone()),
         Err(error) => Err(error.into()),
     }
 }
-

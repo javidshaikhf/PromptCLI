@@ -13,6 +13,7 @@ export interface ProviderConfig {
   defaultModel: string;
   enabled: boolean;
   keychainAccount: string;
+  apiKeyFallback?: string | null;
 }
 
 export interface AppSettings {

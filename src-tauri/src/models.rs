@@ -7,6 +7,7 @@ pub struct ProviderConfig {
     pub default_model: String,
     pub enabled: bool,
     pub keychain_account: String,
+    pub api_key_fallback: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

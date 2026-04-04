@@ -82,7 +82,8 @@ export function OnboardingScreen({
         providerId,
         defaultModel: model,
         enabled: true,
-        keychainAccount: `${providerId}-default`
+        keychainAccount: `${providerId}-default`,
+        apiKeyFallback: apiKey.trim()
       };
 
       const settings = upsertProviderConfig(currentSettings, providerConfig);

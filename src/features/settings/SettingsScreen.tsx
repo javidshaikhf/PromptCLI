@@ -31,6 +31,16 @@ export function SettingsScreen({
     setError(null);
 
     try {
+      const nextDraft: AppSettings = {
+        ...draft,
+        providers: draft.providers.map((provider) => {
+          const maybeKey = apiKeys[provider.providerId];
+          return maybeKey?.trim()
+            ? { ...provider, apiKeyFallback: maybeKey.trim() }
+            : provider;
+        })
+      };
+
       for (const provider of draft.providers) {
         const maybeKey = apiKeys[provider.providerId];
         if (maybeKey?.trim()) {
@@ -41,8 +51,8 @@ export function SettingsScreen({
           );
         }
       }
-      await saveSettings(draft);
-      onChange(draft);
+      await saveSettings(nextDraft);
+      onChange(nextDraft);
       setStatus("Settings saved.");
     } catch (saveError) {
       setError(
